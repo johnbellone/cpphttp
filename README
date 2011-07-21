@@ -1,8 +1,13 @@
 You need boost installed. I'm not going to tell you how to do that.
+I am obviously tired as I'm starting to mistype commands. Here's
+the general workflow with how you should compile, link and run
+this bad boy:
 
-Here's the command to link.
-
-https://github.com/johnbellone/cpphttp/blob/master/main.cc
+(1) Change your nginx.conf to proxy_pass to http://127.0.0.1:9000;
+(2) g++ -I/usr/local/include -L/usr/local/lib -lboost_program_options main.cc
+(3) ./a.out --port=9000;
+(4) Open up the web browser and go;
+(5) Override the message with --message, if you so wish.
 
 I need to take a shower and go to work now.
 
