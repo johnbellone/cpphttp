@@ -1,3 +1,4 @@
+// jb@thunkbrightly.com - written to the music of Billy Joel
 #include <iostream>
 #include <string>
 #include <sstream>
