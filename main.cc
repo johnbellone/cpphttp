@@ -12,6 +12,15 @@
 
 namespace po = boost::program_options;
 
+static void close_socket(int sd)
+{
+    if (sd > 0)
+    {
+        close(sd);
+        sd = -1;
+    }
+}
+
 static int createSocket(int port)
 {
     const int MAX_PENDING = 5;
@@ -71,10 +80,18 @@ int main(int argc, char* argv[])
 
     int sd = -1;
 
+    std::ostringstream response;
+    response<<"HTTP/1.0 200 OK\r\n"
+            <<"Content-Type: text/html; charset=UTF-8\r\n"
+            <<"Content-Length: "<<message.length()<<"\r\n"
+            <<"\r\n"<<message<<"\r\n";
+    message = response.str();
+
     try
     {
         sd = createSocket(port);
 
+        char buf[1025]; buf[1024] = 0;
         struct sockaddr_in client;
         unsigned int len = sizeof(client), c_sd = -1;
 
@@ -87,29 +104,38 @@ int main(int argc, char* argv[])
                 throw std::runtime_error(ss.str());
             }
 
+            int rx = -1;
+            if ((rx = recv(c_sd, buf, 1024, 0)) < 0)
+            {
+                std::cerr<<"Failed reading from "
+                         <<inet_ntoa(client.sin_addr)
+                         <<std::endl;
+            }
+
+            std::cout<<"RX> ("<<inet_ntoa(client.sin_addr)<<") "
+                     <<std::endl<<buf<<std::endl
+                     <<std::flush;
+
             int tx = message.length();
             if (send(c_sd, message.c_str(), tx, 0) != tx)
             {
-                std::cerr<<"Error on sending message to "<<inet_ntoa(client.sin_addr)<<std::endl;
+                std::cerr<<"Error on sending message to client from "
+                         <<inet_ntoa(client.sin_addr)
+                         <<std::endl;
             }
             else
             {
-                std::cout<<"Successfully sent message to "<<inet_ntoa(client.sin_addr)<<std::endl;
+                std::cout<<"TX> "<<message<<std::endl;
             }
 
-            close(c_sd);
-            c_sd = -1;
+            close_socket(c_sd);
         }
     }
     catch (const std::exception& e)
     {
         std::cerr<<e.what()<<std::endl; // spew
-
-        if (sd > 0)
-        {
-            close(sd);
-        }
     }
 
+    close_socket(sd);
     return 0;
 }
