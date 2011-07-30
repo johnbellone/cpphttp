@@ -10,15 +10,24 @@
 namespace po = boost::program_options;
 namespace ba = boost::asio;
 
+class connection {
+    ba::ip::tcp::socket sock;
+public:
+    
+};
+
 class simple_http {
+    typedef boost::shared_ptr<ba::ip::tcp::socket> tcp_socket_sp;
+
     ba::io_service io_service;
     ba::ip::tcp::endpoint endpoint;
     ba::ip::tcp::acceptor acceptor;
-    ba::ip::tcp::socket sock;
     std::string data;
+    int port;    
 
+    void pump_accept();
     void write_handler(const boost::system::error_code& ec, std::size_t tx);;
-    void accept_handler(const boost::system::error_code& ec);
+    void accept_handler(const boost::system::error_code& ec, tcp_socket_sp& sock);
 public:
     simple_http(const std::string& message, int port);
 
@@ -29,18 +38,27 @@ simple_http::simple_http(const std::string& message, int port)
     : io_service()
     , endpoint(ba::ip::tcp::v4(), port)
     , acceptor(io_service, endpoint)
-    , sock(io_service)
     , data(message)
+    , port(port)
 {
     acceptor.listen();
-    acceptor.async_accept(sock, boost::bind(&simple_http::accept_handler, this, ba::placeholders::error));
-
-    std::cout << "Ready to rock and roll on port " << port << std::endl;;
 }
 
 void simple_http::run()
 {
+    pump_accept();
+    std::cout << "Ready to rock and roll on port " << port << std::endl;
     io_service.run();
+}
+
+/*private*/ void simple_http::pump_accept()
+{
+    tcp_socket_sp sock(new ba::ip::tcp::socket(io_service));
+    acceptor.async_accept(*sock, 
+                          boost::bind(&simple_http::accept_handler, 
+                                      this, 
+                                      ba::placeholders::error,
+                                      sock));
 }
 
 /*private*/ void simple_http::write_handler(const boost::system::error_code& ec, std::size_t tx)
@@ -48,14 +66,15 @@ void simple_http::run()
     if (!ec)
     {
         std::cout << "Wrote "<< tx << " bytes" << std::endl;
+        pump_accept();
     }
 }
 
-/*private*/ void simple_http::accept_handler(const boost::system::error_code& ec)
+/*private*/ void simple_http::accept_handler(const boost::system::error_code& ec, tcp_socket_sp& sock)
 {
     if (!ec)
     {
-        ba::async_write(sock, ba::buffer(data), 
+        ba::async_write(*sock, ba::buffer(data), 
                         boost::bind(&simple_http::write_handler, 
                                     this,
                                     ba::placeholders::error,
