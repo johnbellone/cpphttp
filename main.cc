@@ -10,12 +10,6 @@
 namespace po = boost::program_options;
 namespace ba = boost::asio;
 
-class connection {
-    ba::ip::tcp::socket sock;
-public:
-    
-};
-
 class simple_http {
     typedef boost::shared_ptr<ba::ip::tcp::socket> tcp_socket_sp;
 
