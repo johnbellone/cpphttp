@@ -1,7 +1,6 @@
 // jb@thunkbrightly.com - written to the music of Billy Joel
 #include <iostream>
 #include <string>
-#include <sstream>
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
@@ -151,5 +150,5 @@ int main(int argc, char* argv[])
         std::cerr<<e.what()<<std::endl; // spew
     }
 
-    return 0;
+return 0;
 }

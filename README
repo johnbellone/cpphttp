@@ -11,4 +11,6 @@ this bad boy:
 
 I need to take a shower and go to work now.
 
+Note:   -O3 flag produces a 284K binary; a 704K binary without.
+
 -jb
