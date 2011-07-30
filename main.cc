@@ -26,7 +26,7 @@ class simple_http {
     int port;    
 
     void pump_accept();
-    void write_handler(const boost::system::error_code& ec, std::size_t tx);;
+    void write_handler(const boost::system::error_code& ec, std::size_t tx, tcp_socket_sp& sock);;
     void accept_handler(const boost::system::error_code& ec, tcp_socket_sp& sock);
 public:
     simple_http(const std::string& message, int port);
@@ -61,7 +61,7 @@ void simple_http::run()
                                       sock));
 }
 
-/*private*/ void simple_http::write_handler(const boost::system::error_code& ec, std::size_t tx)
+/*private*/ void simple_http::write_handler(const boost::system::error_code& ec, std::size_t tx, tcp_socket_sp& sock)
 {
     if (!ec)
     {
@@ -78,7 +78,8 @@ void simple_http::run()
                         boost::bind(&simple_http::write_handler, 
                                     this,
                                     ba::placeholders::error,
-                                    ba::placeholders::bytes_transferred));
+                                    ba::placeholders::bytes_transferred,
+                                    sock));
     }
 }
 
