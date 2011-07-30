@@ -60,7 +60,6 @@ void simple_http::run()
     if (!ec)
     {
         std::cout << "Wrote "<< tx << " bytes" << std::endl;
-        pump_accept();
     }
 }
 
@@ -74,6 +73,7 @@ void simple_http::run()
                                     ba::placeholders::error,
                                     ba::placeholders::bytes_transferred,
                                     sock));
+        pump_accept();
     }
 }
 
