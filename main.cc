@@ -12,6 +12,7 @@ namespace ba = boost::asio;
 
 class simple_http {
     typedef boost::shared_ptr<ba::ip::tcp::socket> tcp_socket_sp;
+    typedef boost::shared_ptr<ba::streambuf> tcp_streambuf_sp;
 
     ba::io_service io_service;
     ba::ip::tcp::endpoint endpoint;
@@ -20,10 +21,18 @@ class simple_http {
     int port;    
 
     void pump_accept();
-    void write_handler(const boost::system::error_code& ec, std::size_t tx, tcp_socket_sp& sock);;
-    void accept_handler(const boost::system::error_code& ec, tcp_socket_sp& sock);
+    void read_header_handler(const boost::system::error_code& ec, 
+                             std::size_t tx, 
+                             tcp_socket_sp& sock,
+                             tcp_streambuf_sp& sb);
+    void write_handler(const boost::system::error_code& ec, 
+                       std::size_t tx,
+                       tcp_socket_sp& sock);
+    void accept_handler(const boost::system::error_code& ec,
+                        tcp_socket_sp& sock);
 public:
-    simple_http(const std::string& message, int port);
+    simple_http(const std::string& message, 
+                int port);
 
     void run();
 };
@@ -55,7 +64,39 @@ void simple_http::run()
                                       sock));
 }
 
-/*private*/ void simple_http::write_handler(const boost::system::error_code& ec, std::size_t tx, tcp_socket_sp& sock)
+/*private*/ void simple_http::read_header_handler(const boost::system::error_code& ec,
+                                                  std::size_t rx,
+                                                  tcp_socket_sp& sock,
+                                                  tcp_streambuf_sp& sb)
+{
+    if (!ec && rx > 2)
+    {
+        std::istream is(sb.get());
+        std::string line;
+        std::getline(is, line);
+        std::cout <<line<<std::endl;
+
+        ba::async_read_until(*sock, *sb, '\n', 
+                             boost::bind(&simple_http::read_header_handler,
+                                         this,
+                                         ba::placeholders::error,
+                                         ba::placeholders::bytes_transferred,
+                                         sock,
+                                         sb));        
+        return;
+    }
+
+    ba::async_write(*sock, ba::buffer(data), 
+                    boost::bind(&simple_http::write_handler, 
+                                this,
+                                ba::placeholders::error,
+                                ba::placeholders::bytes_transferred,
+                                sock));
+}
+
+/*private*/ void simple_http::write_handler(const boost::system::error_code& ec,
+                                            std::size_t tx,
+                                            tcp_socket_sp& sock)
 {
     if (!ec)
     {
@@ -63,16 +104,19 @@ void simple_http::run()
     }
 }
 
-/*private*/ void simple_http::accept_handler(const boost::system::error_code& ec, tcp_socket_sp& sock)
+/*private*/ void simple_http::accept_handler(const boost::system::error_code& ec, 
+                                             tcp_socket_sp& sock)
 {
     if (!ec)
     {
-        ba::async_write(*sock, ba::buffer(data), 
-                        boost::bind(&simple_http::write_handler, 
-                                    this,
-                                    ba::placeholders::error,
-                                    ba::placeholders::bytes_transferred,
-                                    sock));
+        tcp_streambuf_sp sb(new ba::streambuf());
+        ba::async_read_until(*sock, *sb, '\n', 
+                             boost::bind(&simple_http::read_header_handler,
+                                         this,
+                                         ba::placeholders::error,
+                                         ba::placeholders::bytes_transferred,
+                                         sock,
+                                         sb));
         pump_accept();
     }
 }
