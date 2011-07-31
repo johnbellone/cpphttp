@@ -43,12 +43,13 @@ simple_http::simple_http(const std::string& message, int port)
     , data(message)
     , port(port)
 {
-    acceptor.listen();
 }
 
 void simple_http::run()
 {
+    acceptor.listen();
     pump_accept();
+
     std::cout << "Ready to rock and roll on port " << port << std::endl;
     io_service.run();
 }
@@ -68,6 +69,7 @@ void simple_http::run()
                                                   tcp_socket_sp& sock,
                                                   tcp_streambuf_sp& sb)
 {
+    // If we get a rx length of 2 or less that means we're done reading. 
     if (!ec && rx > 2)
     {
         std::istream is(sb.get());
@@ -75,6 +77,7 @@ void simple_http::run()
         std::getline(is, line);
         std::cout <<line<<std::endl;
 
+        // Continue reading line-by-line from the request.
         ba::async_read_until(*sock, *sb, '\n', 
                              boost::bind(&simple_http::read_header_handler,
                                          this,
@@ -85,6 +88,7 @@ void simple_http::run()
         return;
     }
 
+    // Write whatever message we have for the client.
     ba::async_write(*sock, ba::buffer(data), 
                     boost::bind(&simple_http::write_handler, 
                                 this,
@@ -99,7 +103,8 @@ void simple_http::run()
 {
     if (!ec)
     {
-        std::cout << "Wrote "<< tx << " bytes" << std::endl;
+        std::string address(sock->remote_endpoint().address().to_string());
+        std::cout << "Wrote "<< tx << " bytes to " << address << std::endl;
     }
 }
 
@@ -109,6 +114,8 @@ void simple_http::run()
     if (!ec)
     {
         tcp_streambuf_sp sb(new ba::streambuf());
+     
+        // Dispatch a read request to grab the HTTP header information.
         ba::async_read_until(*sock, *sb, '\n', 
                              boost::bind(&simple_http::read_header_handler,
                                          this,
@@ -116,6 +123,7 @@ void simple_http::run()
                                          ba::placeholders::bytes_transferred,
                                          sock,
                                          sb));
+
         pump_accept();
     }
 }
